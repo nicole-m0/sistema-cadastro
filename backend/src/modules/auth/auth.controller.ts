@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { env, isProduction } from '../../config/env';
-import { loginSchema } from './auth.schema';
-import { authenticateAdmin, getAdminById } from './auth.service';
+import { changePasswordSchema, loginSchema } from './auth.schema';
+import { authenticateAdmin, changeAdminPassword, getAdminById } from './auth.service';
 import { ApiError } from '../../utils/ApiError';
 
 const COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 dias
@@ -36,4 +36,19 @@ export const me = asyncHandler(async (req: Request, res: Response) => {
   }
   const admin = await getAdminById(req.admin.sub);
   res.status(200).json({ success: true, data: admin });
+});
+
+export const changePassword = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.admin) {
+    throw ApiError.unauthorized();
+  }
+  const input = changePasswordSchema.parse(req.body);
+  await changeAdminPassword(req.admin.sub, input);
+
+  // A troca de senha invalida a sessão atual (ver requireAuth), então também limpamos o cookie aqui.
+  res.clearCookie(env.AUTH_COOKIE_NAME, { ...cookieOptions(), maxAge: undefined });
+  res.status(200).json({
+    success: true,
+    message: 'Senha alterada com sucesso. Faça login novamente.',
+  });
 });

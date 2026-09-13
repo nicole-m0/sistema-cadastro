@@ -4,7 +4,7 @@ import { asyncHandler } from '../../utils/asyncHandler';
 import { ApiError } from '../../utils/ApiError';
 import { uploadImageBuffer, deleteImage } from './upload.service';
 
-const folderSchema = z.enum(['students', 'teachers']);
+const folderSchema = z.enum(['students', 'teachers', 'projects']);
 
 export const uploadPhoto = asyncHandler(async (req: Request, res: Response) => {
   if (!req.file) {
@@ -13,7 +13,7 @@ export const uploadPhoto = asyncHandler(async (req: Request, res: Response) => {
 
   const folder = folderSchema.safeParse(req.params.folder);
   if (!folder.success) {
-    throw ApiError.badRequest('Categoria de upload inválida. Use "students" ou "teachers".');
+    throw ApiError.badRequest('Categoria de upload inválida. Use "students", "teachers" ou "projects".');
   }
 
   const result = await uploadImageBuffer(req.file.buffer, folder.data);

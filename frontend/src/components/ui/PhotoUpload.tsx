@@ -9,7 +9,7 @@ const MAX_SIZE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 
 interface PhotoUploadProps {
-  folder: 'students' | 'teachers';
+  folder: 'students' | 'teachers' | 'projects';
   photoUrl?: string | null;
   photoPublicId?: string | null;
   onChange: (result: { url: string | null; publicId: string | null }) => void;

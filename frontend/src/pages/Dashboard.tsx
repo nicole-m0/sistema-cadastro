@@ -1,6 +1,18 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { GraduationCap, Users, UserCheck, UserCog, Plus, User } from 'lucide-react';
+import {
+  GraduationCap,
+  Users,
+  UserCheck,
+  UserCog,
+  Plus,
+  User,
+  Music2,
+  FolderKanban,
+  CalendarDays,
+  ClipboardCheck,
+  AlertTriangle,
+} from 'lucide-react';
 import * as dashboardService from '../services/dashboard';
 import { DashboardSummary } from '../types';
 import { Spinner } from '../components/ui/Spinner';
@@ -136,6 +148,24 @@ export function Dashboard() {
         <StatCard icon={UserCog} label="Professores ativos" value={summary.totals.activeTeachers} tone="amethyst" />
       </div>
 
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <StatCard icon={Music2} label="Instrumentos ativos" value={summary.totals.activeInstruments} tone="gold" />
+        <StatCard icon={FolderKanban} label="Projetos ativos" value={summary.totals.activeProjects} tone="garnet" />
+        <StatCard icon={CalendarDays} label="Turmas ativas" value={summary.totals.activeClassGroups} tone="forest" />
+        <StatCard
+          icon={GraduationCap}
+          label="Alunos matriculados em turmas"
+          value={summary.totals.enrolledStudents}
+          tone="amethyst"
+        />
+        <StatCard
+          icon={Users}
+          label="Professores em turmas"
+          value={summary.totals.teachersInClasses}
+          tone="gold"
+        />
+      </div>
+
       <div className="flex flex-col gap-3 sm:flex-row">
         <Link
           to="/alunos/novo"
@@ -170,6 +200,77 @@ export function Dashboard() {
           getStatusTone={(s) => teacherStatusTone[s as keyof typeof teacherStatusTone]}
           viewAllHref="/professores"
         />
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-card">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-base font-semibold text-ink">Chamadas recentes</h2>
+            <Link to="/chamadas" className="text-sm font-medium text-garnet-600 hover:underline">
+              Ver todas
+            </Link>
+          </div>
+          {summary.recent.attendanceSessions.length === 0 ? (
+            <p className="py-6 text-center text-sm text-gray-400">Nenhuma chamada registrada ainda.</p>
+          ) : (
+            <ul className="divide-y divide-gray-100">
+              {summary.recent.attendanceSessions.map((session) => (
+                <li key={session.id} className="flex items-center gap-3 py-3">
+                  <ClipboardCheck className="h-4 w-4 shrink-0 text-garnet-500" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-ink">{session.classGroup.name}</p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(session.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-card">
+          <h2 className="mb-4 text-base font-semibold text-ink">Turmas com chamada pendente hoje</h2>
+          {summary.pendingAttendance.length === 0 ? (
+            <p className="py-6 text-center text-sm text-gray-400">Nenhuma pendência para hoje.</p>
+          ) : (
+            <ul className="divide-y divide-gray-100">
+              {summary.pendingAttendance.map((classGroup) => (
+                <li key={classGroup.id} className="flex items-center justify-between gap-3 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-ink">{classGroup.name}</p>
+                    <p className="truncate text-xs text-gray-500">{classGroup.project.name}</p>
+                  </div>
+                  <Link
+                    to={`/chamadas/nova?classGroupId=${classGroup.id}`}
+                    className="shrink-0 text-sm font-medium text-garnet-600 hover:underline"
+                  >
+                    Lançar
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-card">
+          <h2 className="mb-4 text-base font-semibold text-ink">Alunos com baixa frequência</h2>
+          {summary.lowAttendanceStudents.length === 0 ? (
+            <p className="py-6 text-center text-sm text-gray-400">Nenhum aluno com baixa frequência.</p>
+          ) : (
+            <ul className="divide-y divide-gray-100">
+              {summary.lowAttendanceStudents.map((student) => (
+                <li key={student.studentId} className="flex items-center justify-between gap-3 py-3">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 shrink-0 text-gold-600" />
+                    <span className="truncate text-sm font-medium text-ink">{student.fullName}</span>
+                  </div>
+                  <Badge tone="warning">{student.attendancePercentage}%</Badge>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
     </div>
   );

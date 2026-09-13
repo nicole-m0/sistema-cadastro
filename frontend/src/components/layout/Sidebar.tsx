@@ -1,11 +1,24 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, GraduationCap, Users, X } from 'lucide-react';
+import {
+  LayoutDashboard,
+  GraduationCap,
+  Users,
+  Music2,
+  FolderKanban,
+  CalendarDays,
+  ClipboardCheck,
+  X,
+} from 'lucide-react';
 import logo from '../../assets/logo-asafe.png';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/alunos', label: 'Alunos', icon: GraduationCap, end: false },
   { to: '/professores', label: 'Professores', icon: Users, end: false },
+  { to: '/instrumentos', label: 'Instrumentos', icon: Music2, end: false },
+  { to: '/projetos', label: 'Projetos', icon: FolderKanban, end: false },
+  { to: '/turmas', label: 'Turmas', icon: CalendarDays, end: false },
+  { to: '/chamadas', label: 'Chamadas', icon: ClipboardCheck, end: false },
 ];
 
 export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {

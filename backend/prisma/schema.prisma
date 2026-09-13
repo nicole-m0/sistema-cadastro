@@ -41,6 +41,52 @@ enum AuditEntity {
   STUDENT
   TEACHER
   ADMIN_USER
+  INSTRUMENT
+  PROJECT
+  CLASS_GROUP
+  CLASS_TEACHER
+  ENROLLMENT
+  ATTENDANCE_SESSION
+}
+
+enum InstrumentStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ProjectStatus {
+  PLANNING
+  ACTIVE
+  CLOSED
+  ARCHIVED
+}
+
+enum Weekday {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum ClassGroupStatus {
+  ACTIVE
+  CLOSED
+  SUSPENDED
+}
+
+enum ClassTeacherRole {
+  RESPONSIBLE
+  ASSISTANT
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  JUSTIFIED
+  LATE
 }
 
 // ------------------------------------------------------
@@ -57,6 +103,9 @@ model AdminUser {
 
   auditLogs AuditLog[]
 
+  attendanceSessionsCreated AttendanceSession[] @relation("AttendanceSessionCreatedBy")
+  attendanceSessionsUpdated AttendanceSession[] @relation("AttendanceSessionUpdatedBy")
+
   @@index([email])
   @@map("admin_users")
 }
@@ -66,15 +115,21 @@ model AdminUser {
 // ------------------------------------------------------
 
 model Instrument {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String           @id @default(cuid())
+  name         String           @unique
+  description  String?
+  status       InstrumentStatus @default(ACTIVE)
+  displayOrder Int              @default(0)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
 
-  students Student[]
-  teachers TeacherInstrument[]
+  students    Student[]
+  teachers    TeacherInstrument[]
+  projects    ProjectInstrument[]
+  classGroups ClassGroup[]
 
   @@index([name])
+  @@index([status])
   @@map("instruments")
 }
 
@@ -104,6 +159,7 @@ model Teacher {
 
   students    Student[]
   instruments TeacherInstrument[]
+  classGroups ClassTeacher[]
 
   @@index([fullName])
   @@index([email])
@@ -157,6 +213,9 @@ model Student {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
+  enrollments       Enrollment[]
+  attendanceRecords AttendanceRecord[]
+
   @@index([fullName])
   @@index([email])
   @@index([phone])
@@ -164,6 +223,164 @@ model Student {
   @@index([teacherId])
   @@index([deletedAt])
   @@map("students")
+}
+
+// ------------------------------------------------------
+// Projetos
+// ------------------------------------------------------
+
+model Project {
+  id            String        @id @default(cuid())
+  name          String
+  description   String?
+  objective     String?
+  location      String?
+  responsible   String?
+  notes         String?
+  imageUrl      String?
+  imagePublicId String?
+  status        ProjectStatus @default(PLANNING)
+  startDate     DateTime?
+  endDate       DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  instruments ProjectInstrument[]
+  classGroups ClassGroup[]
+
+  @@index([name])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("projects")
+}
+
+// Tabela associativa entre projeto e instrumento (N:N)
+model ProjectInstrument {
+  projectId    String
+  instrumentId String
+  createdAt    DateTime @default(now())
+
+  project    Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  instrument Instrument @relation(fields: [instrumentId], references: [id], onDelete: Restrict)
+
+  @@id([projectId, instrumentId])
+  @@map("project_instruments")
+}
+
+// ------------------------------------------------------
+// Turmas
+// ------------------------------------------------------
+
+model ClassGroup {
+  id           String           @id @default(cuid())
+  name         String
+  projectId    String
+  instrumentId String
+  weekday      Weekday
+  startTime    String
+  endTime      String?
+  room         String?
+  capacity     Int?
+  status       ClassGroupStatus @default(ACTIVE)
+  notes        String?
+  startDate    DateTime?
+  endDate      DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  project    Project    @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  instrument Instrument @relation(fields: [instrumentId], references: [id], onDelete: Restrict)
+
+  teachers           ClassTeacher[]
+  enrollments        Enrollment[]
+  attendanceSessions AttendanceSession[]
+
+  @@index([projectId])
+  @@index([instrumentId])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("class_groups")
+}
+
+// Tabela associativa entre turma e professor (responsável ou auxiliar)
+model ClassTeacher {
+  classGroupId String
+  teacherId    String
+  role         ClassTeacherRole
+  createdAt    DateTime         @default(now())
+
+  classGroup ClassGroup @relation(fields: [classGroupId], references: [id], onDelete: Cascade)
+  teacher    Teacher    @relation(fields: [teacherId], references: [id], onDelete: Restrict)
+
+  @@id([classGroupId, teacherId])
+  @@index([teacherId])
+  @@map("class_teachers")
+}
+
+// Matrícula de aluno em turma (remoção é lógica, preserva histórico de chamadas)
+model Enrollment {
+  id           String    @id @default(cuid())
+  classGroupId String
+  studentId    String
+  enrolledAt   DateTime  @default(now())
+  removedAt    DateTime?
+
+  classGroup ClassGroup @relation(fields: [classGroupId], references: [id], onDelete: Cascade)
+  student    Student    @relation(fields: [studentId], references: [id], onDelete: Restrict)
+
+  @@unique([classGroupId, studentId])
+  @@index([classGroupId])
+  @@index([studentId])
+  @@map("enrollments")
+}
+
+// ------------------------------------------------------
+// Chamadas / frequência
+// ------------------------------------------------------
+
+model AttendanceSession {
+  id           String   @id @default(cuid())
+  classGroupId String
+  date         DateTime @db.Date
+  generalNotes String?
+  createdById  String?
+  updatedById  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  classGroup ClassGroup         @relation(fields: [classGroupId], references: [id], onDelete: Restrict)
+  createdBy  AdminUser?         @relation("AttendanceSessionCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy  AdminUser?         @relation("AttendanceSessionUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  records    AttendanceRecord[]
+
+  @@unique([classGroupId, date])
+  @@index([classGroupId])
+  @@index([date])
+  @@map("attendance_sessions")
+}
+
+model AttendanceRecord {
+  id        String           @id @default(cuid())
+  sessionId String
+  studentId String
+  status    AttendanceStatus
+  note      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  session AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  student Student           @relation(fields: [studentId], references: [id], onDelete: Restrict)
+
+  @@unique([sessionId, studentId])
+  @@index([sessionId])
+  @@index([studentId])
+  @@map("attendance_records")
 }
 
 // ------------------------------------------------------

@@ -10,6 +10,11 @@ function usePageTitle() {
   if (pathname === '/') return 'Dashboard';
   if (pathname.startsWith('/alunos')) return 'Alunos';
   if (pathname.startsWith('/professores')) return 'Professores';
+  if (pathname.startsWith('/instrumentos')) return 'Instrumentos';
+  if (pathname.startsWith('/projetos')) return 'Projetos';
+  if (pathname.startsWith('/turmas')) return 'Turmas';
+  if (pathname.startsWith('/chamadas/relatorio')) return 'Relatório de Frequência';
+  if (pathname.startsWith('/chamadas')) return 'Chamadas';
   return 'Associação Asafe';
 }
 

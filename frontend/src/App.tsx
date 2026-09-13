@@ -11,6 +11,18 @@ import { StudentDetail } from './pages/students/StudentDetail';
 import { TeachersList } from './pages/teachers/TeachersList';
 import { TeacherForm } from './pages/teachers/TeacherForm';
 import { TeacherDetail } from './pages/teachers/TeacherDetail';
+import { InstrumentsList } from './pages/instruments/InstrumentsList';
+import { InstrumentForm } from './pages/instruments/InstrumentForm';
+import { InstrumentDetail } from './pages/instruments/InstrumentDetail';
+import { ProjectsList } from './pages/projects/ProjectsList';
+import { ProjectForm } from './pages/projects/ProjectForm';
+import { ProjectDetail } from './pages/projects/ProjectDetail';
+import { ClassGroupsList } from './pages/class-groups/ClassGroupsList';
+import { ClassGroupForm } from './pages/class-groups/ClassGroupForm';
+import { ClassGroupDetail } from './pages/class-groups/ClassGroupDetail';
+import { AttendanceForm } from './pages/attendance/AttendanceForm';
+import { AttendanceHistory } from './pages/attendance/AttendanceHistory';
+import { AttendanceReport } from './pages/attendance/AttendanceReport';
 
 export default function App() {
   return (
@@ -33,6 +45,26 @@ export default function App() {
                 <Route path="/professores/novo" element={<TeacherForm />} />
                 <Route path="/professores/:id" element={<TeacherDetail />} />
                 <Route path="/professores/:id/editar" element={<TeacherForm />} />
+
+                <Route path="/instrumentos" element={<InstrumentsList />} />
+                <Route path="/instrumentos/novo" element={<InstrumentForm />} />
+                <Route path="/instrumentos/:id" element={<InstrumentDetail />} />
+                <Route path="/instrumentos/:id/editar" element={<InstrumentForm />} />
+
+                <Route path="/projetos" element={<ProjectsList />} />
+                <Route path="/projetos/novo" element={<ProjectForm />} />
+                <Route path="/projetos/:id" element={<ProjectDetail />} />
+                <Route path="/projetos/:id/editar" element={<ProjectForm />} />
+
+                <Route path="/turmas" element={<ClassGroupsList />} />
+                <Route path="/turmas/novo" element={<ClassGroupForm />} />
+                <Route path="/turmas/:id" element={<ClassGroupDetail />} />
+                <Route path="/turmas/:id/editar" element={<ClassGroupForm />} />
+
+                <Route path="/chamadas" element={<AttendanceHistory />} />
+                <Route path="/chamadas/relatorio" element={<AttendanceReport />} />
+                <Route path="/chamadas/nova" element={<AttendanceForm />} />
+                <Route path="/chamadas/:id/editar" element={<AttendanceForm />} />
               </Route>
             </Route>
 

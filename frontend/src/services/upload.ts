@@ -6,7 +6,7 @@ export interface UploadResult {
   publicId: string;
 }
 
-export function uploadPhoto(folder: 'students' | 'teachers', file: File) {
+export function uploadPhoto(folder: 'students' | 'teachers' | 'projects', file: File) {
   const formData = new FormData();
   formData.append('photo', file);
 

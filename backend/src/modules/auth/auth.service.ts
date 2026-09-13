@@ -3,7 +3,10 @@ import jwt from 'jsonwebtoken';
 import { prisma } from '../../config/prisma';
 import { env } from '../../config/env';
 import { ApiError } from '../../utils/ApiError';
-import { LoginInput } from './auth.schema';
+import { recordAuditLog } from '../../utils/auditLog';
+import { ChangePasswordInput, LoginInput } from './auth.schema';
+
+const PASSWORD_HASH_ROUNDS = 12;
 
 export async function authenticateAdmin({ email, password }: LoginInput) {
   const admin = await prisma.adminUser.findUnique({ where: { email } });
@@ -35,4 +38,31 @@ export async function getAdminById(id: string) {
     throw ApiError.unauthorized('Usuário não encontrado.');
   }
   return { id: admin.id, name: admin.name, email: admin.email };
+}
+
+export async function changeAdminPassword(adminId: string, input: ChangePasswordInput) {
+  const admin = await prisma.adminUser.findUnique({ where: { id: adminId } });
+  if (!admin) {
+    throw ApiError.unauthorized('Usuário não encontrado.');
+  }
+
+  const currentMatches = await bcrypt.compare(input.currentPassword, admin.passwordHash);
+  if (!currentMatches) {
+    throw ApiError.badRequest('Senha atual incorreta.');
+  }
+
+  const passwordHash = await bcrypt.hash(input.newPassword, PASSWORD_HASH_ROUNDS);
+
+  await prisma.adminUser.update({
+    where: { id: adminId },
+    data: { passwordHash },
+  });
+
+  await recordAuditLog({
+    entityType: 'ADMIN_USER',
+    entityId: adminId,
+    action: 'UPDATE',
+    userId: adminId,
+    changes: { event: 'password_changed' },
+  });
 }

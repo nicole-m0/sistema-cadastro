@@ -1,4 +1,15 @@
-import { PrismaClient, MusicLevel, StudentStatus, TeacherStatus } from '@prisma/client';
+import {
+  PrismaClient,
+  MusicLevel,
+  StudentStatus,
+  TeacherStatus,
+  InstrumentStatus,
+  ProjectStatus,
+  Weekday,
+  ClassGroupStatus,
+  ClassTeacherRole,
+  AttendanceStatus,
+} from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -17,26 +28,32 @@ async function seedAdmin() {
   });
 
   console.log(`Administrador pronto: ${admin.email}`);
+  return admin;
 }
 
 async function seedInstruments() {
-  const names = [
-    'Violão',
-    'Guitarra',
-    'Piano/Teclado',
-    'Bateria',
-    'Canto',
-    'Flauta Doce',
-    'Violino',
-    'Baixo',
+  const items = [
+    { name: 'Violão', description: 'Violão popular e clássico.' },
+    { name: 'Guitarra', description: 'Guitarra elétrica, base e solo.' },
+    { name: 'Piano/Teclado', description: 'Piano acústico e teclado eletrônico.' },
+    { name: 'Bateria', description: 'Bateria acústica e percussão.' },
+    { name: 'Canto', description: 'Técnica vocal e canto coral.' },
+    { name: 'Flauta Doce', description: 'Flauta doce soprano.' },
+    { name: 'Violino', description: 'Violino clássico e popular.' },
+    { name: 'Baixo', description: 'Contrabaixo elétrico.' },
   ];
 
   const instruments = [];
-  for (const name of names) {
+  for (const [index, item] of items.entries()) {
     const instrument = await prisma.instrument.upsert({
-      where: { name },
-      update: {},
-      create: { name },
+      where: { name: item.name },
+      update: { description: item.description, displayOrder: index },
+      create: {
+        name: item.name,
+        description: item.description,
+        displayOrder: index,
+        status: InstrumentStatus.ACTIVE,
+      },
     });
     instruments.push(instrument);
   }
@@ -178,14 +195,189 @@ async function seedStudents(
       },
     });
   }
+
+  return prisma.student.findMany();
+}
+
+async function seedProject(instruments: Awaited<ReturnType<typeof seedInstruments>>) {
+  const byName = (n: string) => instruments.find((i) => i.name === n)!;
+  const name = 'Projeto Jovem Asafe';
+
+  let project = await prisma.project.findFirst({ where: { name } });
+  if (!project) {
+    project = await prisma.project.create({
+      data: {
+        name,
+        description:
+          'Projeto de iniciação musical para crianças e adolescentes atendidos pela associação.',
+        objective: 'Promover inclusão social por meio do ensino de música.',
+        location: 'Sede da Associação Asafe',
+        responsible: 'Coordenação Pedagógica Asafe',
+        status: ProjectStatus.ACTIVE,
+        startDate: new Date('2024-02-01'),
+      },
+    });
+  }
+
+  const instrumentNames = ['Violão', 'Canto', 'Bateria'];
+  for (const instrumentName of instrumentNames) {
+    const instrument = byName(instrumentName);
+    await prisma.projectInstrument.upsert({
+      where: { projectId_instrumentId: { projectId: project.id, instrumentId: instrument.id } },
+      update: {},
+      create: { projectId: project.id, instrumentId: instrument.id },
+    });
+  }
+
+  return project;
+}
+
+async function seedClassGroups(
+  project: Awaited<ReturnType<typeof seedProject>>,
+  instruments: Awaited<ReturnType<typeof seedInstruments>>,
+  teachers: Awaited<ReturnType<typeof seedTeachers>>,
+) {
+  const byInstrument = (n: string) => instruments.find((i) => i.name === n)!;
+  const byTeacher = (n: string) => teachers.find((t) => t.fullName === n)!;
+
+  const classGroupsData = [
+    {
+      name: 'Violão Iniciante - Turma A',
+      instrumentName: 'Violão',
+      responsibleName: 'Marcos Andrade',
+      weekday: Weekday.TUESDAY,
+      startTime: '14:00',
+      endTime: '15:00',
+      room: 'Sala 1',
+      capacity: 10,
+      startDate: new Date('2024-02-06'),
+    },
+    {
+      name: 'Coral Jovem',
+      instrumentName: 'Canto',
+      responsibleName: 'Camila Souza',
+      weekday: Weekday.THURSDAY,
+      startTime: '16:00',
+      endTime: '17:30',
+      room: 'Auditório',
+      capacity: 20,
+      startDate: new Date('2024-02-08'),
+    },
+    {
+      name: 'Bateria Avançado',
+      instrumentName: 'Bateria',
+      responsibleName: 'Pedro Lima',
+      weekday: Weekday.SATURDAY,
+      startTime: '10:00',
+      endTime: '11:00',
+      room: 'Sala 3',
+      capacity: 6,
+      startDate: new Date('2024-02-10'),
+    },
+  ];
+
+  const classGroups = [];
+  for (const c of classGroupsData) {
+    let classGroup = await prisma.classGroup.findFirst({
+      where: { projectId: project.id, name: c.name },
+    });
+    if (!classGroup) {
+      classGroup = await prisma.classGroup.create({
+        data: {
+          name: c.name,
+          projectId: project.id,
+          instrumentId: byInstrument(c.instrumentName).id,
+          weekday: c.weekday,
+          startTime: c.startTime,
+          endTime: c.endTime,
+          room: c.room,
+          capacity: c.capacity,
+          status: ClassGroupStatus.ACTIVE,
+          startDate: c.startDate,
+          teachers: {
+            create: { teacherId: byTeacher(c.responsibleName).id, role: ClassTeacherRole.RESPONSIBLE },
+          },
+        },
+      });
+    }
+    classGroups.push(classGroup);
+  }
+  return classGroups;
+}
+
+async function seedEnrollments(
+  classGroups: Awaited<ReturnType<typeof seedClassGroups>>,
+  students: Awaited<ReturnType<typeof seedStudents>>,
+) {
+  const byClassGroup = (n: string) => classGroups.find((c) => c.name === n)!;
+  const byStudent = (n: string) => students.find((s) => s.fullName === n)!;
+
+  const enrollmentsData = [
+    { classGroupName: 'Violão Iniciante - Turma A', studentName: 'Ana Beatriz Ferreira' },
+    { classGroupName: 'Violão Iniciante - Turma A', studentName: 'João Vitor Santos' },
+    { classGroupName: 'Coral Jovem', studentName: 'Maria Clara Oliveira' },
+  ];
+
+  const enrollments = [];
+  for (const e of enrollmentsData) {
+    const classGroupId = byClassGroup(e.classGroupName).id;
+    const studentId = byStudent(e.studentName).id;
+    const enrollment = await prisma.enrollment.upsert({
+      where: { classGroupId_studentId: { classGroupId, studentId } },
+      update: { removedAt: null },
+      create: { classGroupId, studentId },
+    });
+    enrollments.push(enrollment);
+  }
+  return enrollments;
+}
+
+async function seedAttendanceSession(
+  classGroups: Awaited<ReturnType<typeof seedClassGroups>>,
+  students: Awaited<ReturnType<typeof seedStudents>>,
+  adminId: string,
+) {
+  const classGroup = classGroups.find((c) => c.name === 'Violão Iniciante - Turma A')!;
+  const ana = students.find((s) => s.fullName === 'Ana Beatriz Ferreira')!;
+  const joao = students.find((s) => s.fullName === 'João Vitor Santos')!;
+  const date = new Date('2025-03-04');
+
+  const existing = await prisma.attendanceSession.findUnique({
+    where: { classGroupId_date: { classGroupId: classGroup.id, date } },
+  });
+  if (existing) return existing;
+
+  return prisma.attendanceSession.create({
+    data: {
+      classGroupId: classGroup.id,
+      date,
+      generalNotes: 'Aula regular, revisão de acordes básicos.',
+      createdById: adminId,
+      records: {
+        create: [
+          { studentId: ana.id, status: AttendanceStatus.PRESENT },
+          {
+            studentId: joao.id,
+            status: AttendanceStatus.ABSENT,
+            note: 'Não compareceu, sem justificativa registrada.',
+          },
+        ],
+      },
+    },
+  });
 }
 
 async function main() {
   console.log('Iniciando seed do banco de dados...');
-  await seedAdmin();
+  const admin = await seedAdmin();
   const instruments = await seedInstruments();
   const teachers = await seedTeachers(instruments);
-  await seedStudents(instruments, teachers);
+  const students = await seedStudents(instruments, teachers);
+  const project = await seedProject(instruments);
+  const classGroups = await seedClassGroups(project, instruments, teachers);
+  const enrollments = await seedEnrollments(classGroups, students);
+  await seedAttendanceSession(classGroups, students, admin.id);
+  console.log(`Matrículas: ${enrollments.length}`);
   console.log('Seed concluído com sucesso.');
 }
 
