@@ -1,0 +1,187 @@
+// Schema do banco de dados da Associação Asafe
+// Banco: PostgreSQL (hospedado no Railway)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ------------------------------------------------------
+// Enums
+// ------------------------------------------------------
+
+enum StudentStatus {
+  ACTIVE
+  INACTIVE
+  LOCKED
+}
+
+enum TeacherStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum MusicLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+enum AuditEntity {
+  STUDENT
+  TEACHER
+  ADMIN_USER
+}
+
+// ------------------------------------------------------
+// Usuários administrativos
+// ------------------------------------------------------
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  auditLogs AuditLog[]
+
+  @@index([email])
+  @@map("admin_users")
+}
+
+// ------------------------------------------------------
+// Instrumentos / cursos
+// ------------------------------------------------------
+
+model Instrument {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  students Student[]
+  teachers TeacherInstrument[]
+
+  @@index([name])
+  @@map("instruments")
+}
+
+// ------------------------------------------------------
+// Professores
+// ------------------------------------------------------
+
+model Teacher {
+  id            String        @id @default(cuid())
+  fullName      String
+  socialName    String?
+  document      String?       @unique
+  phone         String?
+  whatsapp      String?
+  email         String?       @unique
+  address       String?
+  specialty     String?
+  hireDate      DateTime?
+  status        TeacherStatus @default(ACTIVE)
+  photoUrl      String?
+  photoPublicId String?
+  bio           String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  students    Student[]
+  instruments TeacherInstrument[]
+
+  @@index([fullName])
+  @@index([email])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("teachers")
+}
+
+// Tabela associativa explícita entre professor e instrumento (N:N)
+model TeacherInstrument {
+  teacherId    String
+  instrumentId String
+
+  teacher    Teacher    @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  instrument Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+
+  @@id([teacherId, instrumentId])
+  @@map("teacher_instruments")
+}
+
+// ------------------------------------------------------
+// Alunos
+// ------------------------------------------------------
+
+model Student {
+  id             String        @id @default(cuid())
+  fullName       String
+  socialName     String?
+  birthDate      DateTime?
+  document       String?       @unique
+  phone          String?
+  whatsapp       String?
+  email          String?
+  address        String?
+  city           String?
+  state          String?
+  level          MusicLevel    @default(BEGINNER)
+  enrollmentDate DateTime?
+  status         StudentStatus @default(ACTIVE)
+  photoUrl       String?
+  photoPublicId  String?
+  notes          String?
+
+  instrumentId String?
+  instrument   Instrument? @relation(fields: [instrumentId], references: [id], onDelete: SetNull)
+
+  teacherId String?
+  teacher   Teacher? @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([fullName])
+  @@index([email])
+  @@index([phone])
+  @@index([status])
+  @@index([teacherId])
+  @@index([deletedAt])
+  @@map("students")
+}
+
+// ------------------------------------------------------
+// Log de auditoria (criação/edição/exclusão)
+// ------------------------------------------------------
+
+model AuditLog {
+  id         String      @id @default(cuid())
+  entityType AuditEntity
+  entityId   String
+  action     AuditAction
+  changes    Json?
+  createdAt  DateTime    @default(now())
+
+  userId String?
+  user   AdminUser? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

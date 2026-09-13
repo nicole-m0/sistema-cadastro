@@ -1,0 +1,11 @@
+process.env.NODE_ENV = 'test';
+process.env.DATABASE_URL = process.env.DATABASE_URL ?? 'postgresql://test:test@localhost:5432/asafe_test';
+process.env.JWT_SECRET = process.env.JWT_SECRET ?? 'test-secret-key-not-for-production';
+process.env.JWT_EXPIRES_IN = '1h';
+process.env.AUTH_COOKIE_NAME = 'asafe_session';
+process.env.CORS_ORIGIN = 'http://localhost:5173';
+process.env.ADMIN_EMAIL = 'admin@asafe.org';
+process.env.ADMIN_PASSWORD = 'TestPassword123!';
+process.env.CLOUDINARY_CLOUD_NAME = 'test-cloud';
+process.env.CLOUDINARY_API_KEY = 'test-key';
+process.env.CLOUDINARY_API_SECRET = 'test-secret';
