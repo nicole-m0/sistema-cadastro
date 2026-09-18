@@ -3,6 +3,7 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 
 const prismaMock = vi.hoisted(() => ({
+  adminUser: { findUnique: vi.fn() },
   student: { count: vi.fn(), findMany: vi.fn() },
   teacher: { count: vi.fn(), findMany: vi.fn() },
   instrument: { count: vi.fn() },
@@ -29,6 +30,7 @@ function authCookie() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  prismaMock.adminUser.findUnique.mockResolvedValue({ updatedAt: new Date('2020-01-01T00:00:00.000Z') });
   prismaMock.student.count.mockResolvedValue(0);
   prismaMock.teacher.count.mockResolvedValue(0);
   prismaMock.instrument.count.mockResolvedValue(0);

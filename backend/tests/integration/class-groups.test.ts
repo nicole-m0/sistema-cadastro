@@ -3,6 +3,7 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 
 const prismaMock = vi.hoisted(() => ({
+  adminUser: { findUnique: vi.fn() },
   classGroup: {
     findMany: vi.fn(),
     count: vi.fn(),
@@ -65,6 +66,7 @@ const baseClassGroup = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  prismaMock.adminUser.findUnique.mockResolvedValue({ updatedAt: new Date('2020-01-01T00:00:00.000Z') });
   prismaMock.$transaction.mockImplementation(async (arg) => {
     if (Array.isArray(arg)) return Promise.all(arg);
     return arg(prismaMock);
