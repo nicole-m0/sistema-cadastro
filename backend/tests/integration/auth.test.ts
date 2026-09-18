@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
 import bcrypt from 'bcryptjs';
 
@@ -75,6 +75,31 @@ describe('POST /api/auth/login', () => {
   });
 });
 
+describe('Rate limit de login', () => {
+  it('bloqueia com 429 após muitas tentativas seguidas, sem revelar se o e-mail existe', async () => {
+    const blockedBodies: { success: boolean; message?: string }[] = [];
+
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      // Alterna e-mail existente/inexistente: o bloqueio deve valer igual para os dois casos.
+      const email = attempt % 2 === 0 ? ADMIN_EMAIL : 'naoexiste@asafe.org';
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({ email, password: 'senha-errada' });
+
+      if (res.status === 429) {
+        blockedBodies.push(res.body);
+        break;
+      }
+    }
+
+    expect(blockedBodies).toHaveLength(1);
+    const [blocked] = blockedBodies;
+    expect(blocked.success).toBe(false);
+    expect(blocked.message).toMatch(/tentativas/i);
+    expect(blocked.message).not.toMatch(/e-?mail/i);
+  });
+});
+
 describe('Proteção de rotas privadas', () => {
   it('bloqueia acesso a /api/students sem cookie de sessão', async () => {
     const res = await request(app).get('/api/students');
@@ -84,5 +109,50 @@ describe('Proteção de rotas privadas', () => {
   it('bloqueia acesso a /api/auth/me sem cookie de sessão', async () => {
     const res = await request(app).get('/api/auth/me');
     expect(res.status).toBe(401);
+  });
+});
+
+describe('Cookie de sessão conforme NODE_ENV', () => {
+  const originalNodeEnv = process.env.NODE_ENV;
+
+  afterEach(() => {
+    process.env.NODE_ENV = originalNodeEnv;
+    vi.resetModules();
+  });
+
+  it('usa Secure e SameSite=None quando NODE_ENV=production', async () => {
+    vi.resetModules();
+    process.env.NODE_ENV = 'production';
+
+    const { createApp: createProdApp } = await import('../../src/app');
+    const prodApp = createProdApp();
+
+    const res = await request(prodApp)
+      .post('/api/auth/login')
+      .send({ email: ADMIN_EMAIL, password: PLAIN_PASSWORD });
+
+    expect(res.status).toBe(200);
+    const setCookie = res.headers['set-cookie'];
+    expect(setCookie).toBeDefined();
+    expect(setCookie[0]).toMatch(/Secure/);
+    expect(setCookie[0]).toMatch(/SameSite=None/i);
+  });
+
+  it('usa SameSite=Lax e sem Secure quando NODE_ENV=development', async () => {
+    vi.resetModules();
+    process.env.NODE_ENV = 'development';
+
+    const { createApp: createDevApp } = await import('../../src/app');
+    const devApp = createDevApp();
+
+    const res = await request(devApp)
+      .post('/api/auth/login')
+      .send({ email: ADMIN_EMAIL, password: PLAIN_PASSWORD });
+
+    expect(res.status).toBe(200);
+    const setCookie = res.headers['set-cookie'];
+    expect(setCookie).toBeDefined();
+    expect(setCookie[0]).not.toMatch(/Secure/);
+    expect(setCookie[0]).toMatch(/SameSite=Lax/i);
   });
 });

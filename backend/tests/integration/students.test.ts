@@ -88,6 +88,17 @@ describe('POST /api/students', () => {
     expect(prismaMock.auditLog.create).toHaveBeenCalledOnce();
   });
 
+  it('bloqueia com 403 quando a Origin não está na allowlist (proteção CSRF global)', async () => {
+    const res = await request(app)
+      .post('/api/students')
+      .set('Cookie', authCookie())
+      .set('Origin', 'https://site-malicioso.example')
+      .send({ fullName: 'Aluno Teste', email: 'aluno@example.com' });
+
+    expect(res.status).toBe(403);
+    expect(prismaMock.student.create).not.toHaveBeenCalled();
+  });
+
   it('retorna 400 quando o nome completo não é enviado', async () => {
     const res = await request(app)
       .post('/api/students')

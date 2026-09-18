@@ -3,9 +3,14 @@ import { z } from 'zod';
 
 const envSchema = z.object({
   PORT: z.coerce.number().default(4000),
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  // Sem valor default: se não for definido explicitamente (ex.: esquecido na Railway), o app
+  // deve falhar ao iniciar em vez de rodar silenciosamente como "development" — isso é o que
+  // define secure/sameSite do cookie de sessão (ver auth.controller.ts).
+  NODE_ENV: z.enum(['development', 'production', 'test'], {
+    required_error: 'NODE_ENV é obrigatório (development | production | test).',
+  }),
   DATABASE_URL: z.string().min(1, 'DATABASE_URL é obrigatório'),
-  JWT_SECRET: z.string().min(10, 'JWT_SECRET deve ter pelo menos 10 caracteres'),
+  JWT_SECRET: z.string().min(32, 'JWT_SECRET deve ter pelo menos 32 caracteres.'),
   JWT_EXPIRES_IN: z.string().default('7d'),
   AUTH_COOKIE_NAME: z.string().default('asafe_session'),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),

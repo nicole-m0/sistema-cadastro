@@ -14,10 +14,35 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
+const DEFAULT_ADMIN_PASSWORD = 'TrocarEssaSenha123!';
+
+function assertPasswordSafeForProduction(password: string) {
+  if (process.env.NODE_ENV !== 'production') return;
+
+  if (password === DEFAULT_ADMIN_PASSWORD) {
+    throw new Error(
+      'ADMIN_PASSWORD não pode usar o valor padrão de exemplo em produção. Defina uma senha forte em ADMIN_PASSWORD antes de rodar o seed.',
+    );
+  }
+
+  const complexityIssue = [
+    [password.length < 8, 'ao menos 8 caracteres'],
+    [!/[a-z]/.test(password), 'uma letra minúscula'],
+    [!/[A-Z]/.test(password), 'uma letra maiúscula'],
+    [!/[0-9]/.test(password), 'um número'],
+  ].find(([failed]) => failed) as [boolean, string] | undefined;
+
+  if (complexityIssue) {
+    throw new Error(`ADMIN_PASSWORD em produção deve conter ${complexityIssue[1]}.`);
+  }
+}
+
 async function seedAdmin() {
   const name = process.env.ADMIN_NAME ?? 'Administrador Asafe';
   const email = process.env.ADMIN_EMAIL ?? 'admin@asafe.org';
-  const password = process.env.ADMIN_PASSWORD ?? 'TrocarEssaSenha123!';
+  const password = process.env.ADMIN_PASSWORD ?? DEFAULT_ADMIN_PASSWORD;
+
+  assertPasswordSafeForProduction(password);
 
   const passwordHash = await bcrypt.hash(password, 12);
 

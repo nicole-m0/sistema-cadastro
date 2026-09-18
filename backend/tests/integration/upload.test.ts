@@ -114,4 +114,114 @@ describe('DELETE /api/upload', () => {
     expect(res.status).toBe(200);
     expect(destroyMock).toHaveBeenCalledWith('asafe/students/foo');
   });
+
+  it('rejeita publicId fora do namespace desta aplicação (BOLA)', async () => {
+    const res = await request(app)
+      .delete('/api/upload')
+      .set('Cookie', authCookie())
+      .send({ publicId: 'outra-conta/outra-pasta/foo' });
+
+    expect(res.status).toBe(403);
+    expect(destroyMock).not.toHaveBeenCalled();
+  });
+
+  it('rejeita publicId dentro da pasta da aplicação mas fora das subpastas permitidas', async () => {
+    const res = await request(app)
+      .delete('/api/upload')
+      .set('Cookie', authCookie())
+      .send({ publicId: 'asafe/outra-coisa/foo' });
+
+    expect(res.status).toBe(403);
+    expect(destroyMock).not.toHaveBeenCalled();
+  });
+
+  it('rejeita publicId com segmento de path traversal ("..") mesmo com prefixo válido', async () => {
+    const res = await request(app)
+      .delete('/api/upload')
+      .set('Cookie', authCookie())
+      .send({ publicId: 'asafe/students/../../../secret' });
+
+    expect(res.status).toBe(403);
+    expect(destroyMock).not.toHaveBeenCalled();
+  });
+
+  it('rejeita publicId sem identificador de arquivo (só pasta)', async () => {
+    const res = await request(app)
+      .delete('/api/upload')
+      .set('Cookie', authCookie())
+      .send({ publicId: 'asafe/students' });
+
+    expect(res.status).toBe(403);
+    expect(destroyMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('Proteção CSRF (verificação de Origin)', () => {
+  it('permite upload quando a Origin está na allowlist de CORS_ORIGIN', async () => {
+    uploadStreamMock.mockImplementation((_options, callback) => {
+      callback(null, {
+        secure_url: 'https://res.cloudinary.com/test/image/upload/v1/asafe/students/foo.jpg',
+        public_id: 'asafe/students/foo',
+      });
+      return { end: vi.fn() };
+    });
+
+    const res = await request(app)
+      .post('/api/upload/students')
+      .set('Cookie', authCookie())
+      .set('Origin', process.env.CORS_ORIGIN as string)
+      .attach('photo', Buffer.from('fake-image-content'), {
+        filename: 'foto.jpg',
+        contentType: 'image/jpeg',
+      });
+
+    expect(res.status).toBe(201);
+  });
+
+  it('bloqueia upload vindo de uma Origin fora da allowlist', async () => {
+    const res = await request(app)
+      .post('/api/upload/students')
+      .set('Cookie', authCookie())
+      .set('Origin', 'https://site-malicioso.example')
+      .attach('photo', Buffer.from('fake-image-content'), {
+        filename: 'foto.jpg',
+        contentType: 'image/jpeg',
+      });
+
+    expect(res.status).toBe(403);
+    expect(uploadStreamMock).not.toHaveBeenCalled();
+  });
+
+  it('bloqueia remoção de imagem vinda de uma Origin fora da allowlist', async () => {
+    const res = await request(app)
+      .delete('/api/upload')
+      .set('Cookie', authCookie())
+      .set('Origin', 'https://site-malicioso.example')
+      .send({ publicId: 'asafe/students/foo' });
+
+    expect(res.status).toBe(403);
+    expect(destroyMock).not.toHaveBeenCalled();
+  });
+
+  it('bloqueia quando o header Origin vem presente mas vazio', async () => {
+    const res = await request(app)
+      .delete('/api/upload')
+      .set('Cookie', authCookie())
+      .set('Origin', '')
+      .send({ publicId: 'asafe/students/foo' });
+
+    expect(res.status).toBe(403);
+    expect(destroyMock).not.toHaveBeenCalled();
+  });
+
+  it('permite quando não há Origin nem Referer (cliente não-browser, ex.: chamadas internas/testes)', async () => {
+    destroyMock.mockResolvedValue({ result: 'ok' });
+
+    const res = await request(app)
+      .delete('/api/upload')
+      .set('Cookie', authCookie())
+      .send({ publicId: 'asafe/students/foo' });
+
+    expect(res.status).toBe(200);
+  });
 });
