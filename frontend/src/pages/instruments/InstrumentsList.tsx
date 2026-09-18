@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Eye, Music2, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { Music2, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import * as instrumentsService from '../../services/instruments';
 import { Instrument, InstrumentStatus } from '../../types';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -161,10 +161,10 @@ export function InstrumentsList() {
                         <div className="flex justify-end gap-1">
                           <Link
                             to={`/instrumentos/${instrument.id}`}
-                            title="Ver detalhes"
-                            className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-ink"
+                            title="Ver mais"
+                            className="rounded px-2 py-1.5 text-sm font-medium text-gray-500 hover:bg-gray-100 hover:text-ink"
                           >
-                            <Eye className="h-4 w-4" />
+                            Ver mais
                           </Link>
                           <Link
                             to={`/instrumentos/${instrument.id}/editar`}

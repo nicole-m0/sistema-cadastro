@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CalendarDays, Eye, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { CalendarDays, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import * as classGroupsService from '../../services/classGroups';
 import { useProjects } from '../../hooks/useProjects';
 import { ClassGroup, ClassGroupStatus } from '../../types';
@@ -185,10 +185,10 @@ export function ClassGroupsList() {
                         <div className="flex justify-end gap-1">
                           <Link
                             to={`/turmas/${cg.id}`}
-                            title="Ver detalhes"
-                            className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-ink"
+                            title="Ver mais"
+                            className="rounded px-2 py-1.5 text-sm font-medium text-gray-500 hover:bg-gray-100 hover:text-ink"
                           >
-                            <Eye className="h-4 w-4" />
+                            Ver mais
                           </Link>
                           <Link
                             to={`/turmas/${cg.id}/editar`}

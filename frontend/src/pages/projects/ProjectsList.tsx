@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Eye, FolderKanban, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { FolderKanban, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import * as projectsService from '../../services/projects';
 import { Project, ProjectStatus } from '../../types';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -174,10 +174,10 @@ export function ProjectsList() {
                         <div className="flex justify-end gap-1">
                           <Link
                             to={`/projetos/${project.id}`}
-                            title="Ver detalhes"
-                            className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-ink"
+                            title="Ver mais"
+                            className="rounded px-2 py-1.5 text-sm font-medium text-gray-500 hover:bg-gray-100 hover:text-ink"
                           >
-                            <Eye className="h-4 w-4" />
+                            Ver mais
                           </Link>
                           <Link
                             to={`/projetos/${project.id}/editar`}

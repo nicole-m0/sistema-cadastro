@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Eye, Pencil, Plus, Search, Trash2, User } from 'lucide-react';
+import { Pencil, Plus, Search, Trash2, User } from 'lucide-react';
 import * as teachersService from '../../services/teachers';
 import { Teacher, TeacherStatus } from '../../types';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -171,10 +171,10 @@ export function TeachersList() {
                         <div className="flex justify-end gap-1">
                           <Link
                             to={`/professores/${teacher.id}`}
-                            title="Ver detalhes"
-                            className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-ink"
+                            title="Ver mais"
+                            className="rounded px-2 py-1.5 text-sm font-medium text-gray-500 hover:bg-gray-100 hover:text-ink"
                           >
-                            <Eye className="h-4 w-4" />
+                            Ver mais
                           </Link>
                           <Link
                             to={`/professores/${teacher.id}/editar`}
