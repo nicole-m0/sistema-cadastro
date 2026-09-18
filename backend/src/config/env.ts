@@ -16,7 +16,10 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
   ADMIN_NAME: z.string().default('Administrador Asafe'),
   ADMIN_EMAIL: z.string().email().default('admin@asafe.org'),
-  ADMIN_PASSWORD: z.string().default('TrocarEssaSenha123!'),
+  // Sem default: consumida pelo seed (ver prisma/seed.ts) para criar/atualizar o AdminUser.
+  // Exigir o valor explicitamente evita que o placeholder de exemplo vaze silenciosamente
+  // para qualquer ambiente onde a variável foi esquecida.
+  ADMIN_PASSWORD: z.string().min(1, 'ADMIN_PASSWORD é obrigatório.'),
   CLOUDINARY_CLOUD_NAME: z.string().default(''),
   CLOUDINARY_API_KEY: z.string().default(''),
   CLOUDINARY_API_SECRET: z.string().default(''),

@@ -53,4 +53,44 @@ describe('validação de variáveis de ambiente (config/env.ts)', () => {
     expect(mod.env.NODE_ENV).toBe('test');
     expect(mod.isProduction).toBe(false);
   });
+
+  it('recusa iniciar se ADMIN_PASSWORD não estiver definido', async () => {
+    vi.resetModules();
+    delete process.env.ADMIN_PASSWORD;
+
+    await expect(import('../src/config/env')).rejects.toThrow(
+      /Configuração de ambiente inválida/,
+    );
+  });
+
+  it('recusa iniciar se ADMIN_PASSWORD estiver vazio', async () => {
+    vi.resetModules();
+    process.env.ADMIN_PASSWORD = '';
+
+    await expect(import('../src/config/env')).rejects.toThrow();
+  });
+
+  it('inicia normalmente com ADMIN_PASSWORD definido, sem aplicar o placeholder de exemplo', async () => {
+    vi.resetModules();
+    process.env.ADMIN_PASSWORD = 'QualquerSenhaDefinidaPeloOperador1';
+
+    const mod = await import('../src/config/env');
+    expect(mod.env.ADMIN_PASSWORD).toBe('QualquerSenhaDefinidaPeloOperador1');
+  });
+
+  it('usa CORS_ORIGIN default (localhost:5173) quando a variável não é definida', async () => {
+    vi.resetModules();
+    delete process.env.CORS_ORIGIN;
+
+    const mod = await import('../src/config/env');
+    expect(mod.corsOrigins).toEqual(['http://localhost:5173']);
+  });
+
+  it('faz parse de CORS_ORIGIN com múltiplas origens separadas por vírgula, removendo espaços', async () => {
+    vi.resetModules();
+    process.env.CORS_ORIGIN = 'https://asafe-admin.vercel.app, https://outro-dominio.com';
+
+    const mod = await import('../src/config/env');
+    expect(mod.corsOrigins).toEqual(['https://asafe-admin.vercel.app', 'https://outro-dominio.com']);
+  });
 });
